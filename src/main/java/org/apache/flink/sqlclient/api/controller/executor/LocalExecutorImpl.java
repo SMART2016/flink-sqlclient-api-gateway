@@ -32,7 +32,8 @@ public class LocalExecutorImpl implements Executor{
     public LocalExecutorImpl(Map<String, InputStream> envFileIsMap) {
         try {
             //load the flink cluster config file.
-            // [link-conf.yaml file which is packaged as one of the files in the input zip file]
+            // [flink-conf.yaml file which is packaged as one of the files in the input zip file]
+            //flink-conf.yaml: See {@linktourl https://github.com/apache/flink/blob/master/flink-dist/src/main/resources/flink-conf.yaml}
             flinkConfig = EnvConfigManager.loadFlinkConfig(envFileIsMap.get("flink-conf.yaml"));
             System.out.println("Flink config details:"+flinkConfig.toMap());
             print(CoreOptions.getParentFirstLoaderPatterns(flinkConfig));
@@ -44,6 +45,8 @@ public class LocalExecutorImpl implements Executor{
             //For storing the incoming files against the current sessionid is one requirement for the API so
             //that it can be reused for further communication or during recovery
             //This can be a local filesystem for now or any other distributed file system in Real environment[S3 , Hadoop etc]
+            //For S3 we need to add an implementation for the filesystem currently supported default is haddop(HDFS)
+            //See {@linktourl https://ci.apache.org/projects/flink/flink-docs-master/api/java/org/apache/flink/core/fs/FileSystem.html}
             FileSystem.initialize(flinkConfig, PluginUtils.createPluginManagerFromRootFolder(flinkConfig));
         }catch (Exception e) {
                 throw new SqlClientException("Could not load Flink configuration.", e);
