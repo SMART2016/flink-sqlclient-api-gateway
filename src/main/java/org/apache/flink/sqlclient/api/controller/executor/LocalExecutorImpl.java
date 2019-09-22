@@ -1,5 +1,9 @@
 package org.apache.flink.sqlclient.api.controller.executor;
 
+import org.apache.flink.configuration.CoreOptions;
+import org.apache.flink.core.fs.FileSystem;
+import org.apache.flink.core.plugin.PluginConfig;
+import org.apache.flink.core.plugin.PluginUtils;
 import org.apache.flink.sqlclient.api.controller.executor.config.EnvConfigManager;
 import org.apache.flink.sqlclient.api.controller.executor.exception.SqlExecutionException;
 import org.apache.flink.api.java.tuple.Tuple2;
@@ -28,13 +32,29 @@ public class LocalExecutorImpl implements Executor{
     public LocalExecutorImpl(Map<String, InputStream> envFileIsMap) {
         try {
             //load the flink cluster config file.
+            // [link-conf.yaml file which is packaged as one of the files in the input zip file]
             flinkConfig = EnvConfigManager.loadFlinkConfig(envFileIsMap.get("flink-conf.yaml"));
             System.out.println("Flink config details:"+flinkConfig.toMap());
+            print(CoreOptions.getParentFirstLoaderPatterns(flinkConfig));
+            System.out.println("Plugin config: "+ PluginConfig.fromConfiguration(flinkConfig));
+
+
+            //Initialize file system default/Actual distributed based on the mode
+            //The information for the filesystem is acquired from the first config file flink-conf.yaml
+            //For storing the incoming files against the current sessionid is one requirement for the API so
+            //that it can be reused for further communication or during recovery
+            //This can be a local filesystem for now or any other distributed file system in Real environment[S3 , Hadoop etc]
+            FileSystem.initialize(flinkConfig, PluginUtils.createPluginManagerFromRootFolder(flinkConfig));
         }catch (Exception e) {
                 throw new SqlClientException("Could not load Flink configuration.", e);
             }
     }
 
+    private void print(String[] strArr){
+        for (String s: strArr) {
+            System.out.println(s);
+        }
+    }
 
     @Override
     public void start() throws SqlExecutionException {
