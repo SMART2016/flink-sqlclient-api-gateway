@@ -1,11 +1,18 @@
 package org.apache.flink.sqlclient.api.controller.executor.config;
 
+import jdk.internal.util.xml.impl.Input;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.JsonMappingException;
+import org.apache.flink.table.client.SqlClientException;
+import org.apache.flink.table.client.config.ConfigUtil;
+import org.apache.flink.table.client.config.Environment;
 import org.apache.flink.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.net.URL;
+import java.util.Map;
 
 public class EnvConfigManager {
 
@@ -14,9 +21,7 @@ public class EnvConfigManager {
 
 
     public static Configuration loadFlinkConfig(InputStream envFile) {
-        Configuration conf = null;
-        conf = loadYAMLResource(envFile);
-        return conf;
+        return loadYAMLResource(envFile);
     }
 
 
@@ -75,7 +80,7 @@ public class EnvConfigManager {
         }
     }
 
-    public static boolean isSensitive(String key) {
+    private static boolean isSensitive(String key) {
         Preconditions.checkNotNull(key, "key is null");
         String keyInLower = key.toLowerCase();
         String[] var2 = SENSITIVE_KEYS;
@@ -89,5 +94,44 @@ public class EnvConfigManager {
         }
 
         return false;
+    }
+
+
+    //1) Returns a blank environment object if no sql client env file is uploaded in the request
+    //2) If sql client env file is uploaded as input streams in the API then create an environment parsing the inputstream,
+    //3) Latter when the environment inputstream file will be pushed to the Filesystem , an environment with actual env file(sql-client-defaults.yaml)
+    // url can be generated.
+    //@RuntimeException:  Throws runtime exception SqlClientException
+    public static Environment getEnvironment(URL envUrl, Map<String, InputStream> envFileMap) {
+
+        if (envFileMap.get("sql-client-defaults.yaml") == null) {
+            return new Environment();
+        } else if (envUrl == null) {
+            LOG.info("Using session environment file from InputStream stored in inmemory envFileMap");
+            try {
+                return parse(envFileMap.get("sql-client-defaults.yaml"));
+            } catch (IOException e) {
+                LOG.error("Could not read session environment file (sql-client-defaults.yaml) From Input stream in envFileMap Reason: ", e);
+                throw new SqlClientException("Could not read session environment file (sql-client-defaults.yaml) From Input stream in envFileMap: " + e);
+            }
+        } else {
+            System.out.println("Reading session environment from: " + envUrl);
+            LOG.info("Using session environment file: {}", envUrl);
+            try {
+                return Environment.parse(envUrl);
+            } catch (IOException e) {
+                LOG.error("Could not read session environment (sql-client-defaults.yaml) file at: {}", envUrl);
+                throw new SqlClientException("Could not read session environment (sql-client-defaults.yaml) file at: " + envUrl, e);
+            }
+        }
+
+    }
+
+    private static Environment parse(InputStream envFile) throws IOException {
+        try {
+            return new ConfigUtil.LowerCaseYamlMapper().readValue(envFile, Environment.class);
+        } catch (JsonMappingException var2) {
+            throw new SqlClientException("Could not parse environment file. Cause: " + var2.getMessage());
+        }
     }
 }

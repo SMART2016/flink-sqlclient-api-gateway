@@ -9,11 +9,14 @@ import org.apache.flink.sqlclient.api.controller.executor.exception.SqlExecution
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.client.SqlClientException;
+import org.apache.flink.table.client.config.Environment;
 import org.apache.flink.table.client.gateway.ProgramTargetDescriptor;
 import org.apache.flink.table.client.gateway.ResultDescriptor;
 import org.apache.flink.table.client.gateway.TypedResult;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.table.client.gateway.local.ResultStore;
 import org.apache.flink.types.Row;
+
 
 import java.io.File;
 import java.io.InputStream;
@@ -24,20 +27,20 @@ public class LocalExecutorImpl implements Executor{
 
     //The configuration file defining the cluster to connect to and few cluster specific parameters.
     private final Configuration flinkConfig;
+    private final Environment defaultEnvironment;
+    private final ResultStore resultStore;
 
     /**
      * Constructor taking env file map in case of Local Mode
-     * @param envFileIsMap
+     * @param envFileIsMap map containing input file as input streams with key as filename and value as the file content as inputstream
      */
     public LocalExecutorImpl(Map<String, InputStream> envFileIsMap) {
         try {
+
             //load the flink cluster config file.
             // [flink-conf.yaml file which is packaged as one of the files in the input zip file]
             //flink-conf.yaml: See {@linktourl https://github.com/apache/flink/blob/master/flink-dist/src/main/resources/flink-conf.yaml}
             flinkConfig = EnvConfigManager.loadFlinkConfig(envFileIsMap.get("flink-conf.yaml"));
-            System.out.println("Flink config details:"+flinkConfig.toMap());
-            print(CoreOptions.getParentFirstLoaderPatterns(flinkConfig));
-            System.out.println("Plugin config: "+ PluginConfig.fromConfiguration(flinkConfig));
 
 
             //Initialize file system default/Actual distributed based on the mode
@@ -47,7 +50,23 @@ public class LocalExecutorImpl implements Executor{
             //This can be a local filesystem for now or any other distributed file system in Real environment[S3 , Hadoop etc]
             //For S3 we need to add an implementation for the filesystem currently supported default is haddop(HDFS)
             //See {@linktourl https://ci.apache.org/projects/flink/flink-docs-master/api/java/org/apache/flink/core/fs/FileSystem.html}
+            //The file system is provided as a plugin throug the plugin manager.
             FileSystem.initialize(flinkConfig, PluginUtils.createPluginManagerFromRootFolder(flinkConfig));
+
+            //TODO: Store the files in the envFileMap in the Filesystem initialized above and set the dependencies
+            // (Jar and library location) and default env(sql-client-defaults.yaml location) also set the file locations as url in a List or map
+
+            //TODO: commandline and commandline options will be set latter when the use is identified
+
+            //Right now there is no path for the sql-client-defaults.yaml as it will
+            //be a part of the Rest input zip and is in the envFileMap as InputStream
+            //Later when it will be stored in the filesystem the default environment can be created
+            // parsing the path for the sql-client-defaults.yaml in the files system
+            defaultEnvironment = new Environment();
+
+            // prepare result store
+            resultStore = new ResultStore(flinkConfig);
+
         }catch (Exception e) {
                 throw new SqlClientException("Could not load Flink configuration.", e);
             }

@@ -90,7 +90,15 @@
 			<version>${flink-version}</version>
 		</dependency>
 
-<!--		<dependency>-->
+		<!-- https://mvnrepository.com/artifact/org.apache.flink/flink-yarn -->
+		<dependency>
+			<groupId>org.apache.flink</groupId>
+			<artifactId>flink-yarn_${scala.binary.version}</artifactId>
+			<version>${flink-version}</version>
+		</dependency>
+
+
+		<!--		<dependency>-->
 <!--			<groupId>org.apache.flink</groupId>-->
 <!--			<artifactId>flink-table-planner-blink_${scala.binary.version}</artifactId>-->
 <!--			<version>${flink-version}</version>-->

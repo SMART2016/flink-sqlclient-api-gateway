@@ -2,12 +2,17 @@ package org.apache.flink.sqlclient.api.controller;
 
 import org.apache.flink.sqlclient.api.controller.executor.Executor;
 import org.apache.flink.sqlclient.api.controller.executor.LocalExecutorImpl;
+import org.apache.flink.sqlclient.api.controller.executor.config.EnvConfigManager;
 import org.apache.flink.sqlclient.api.controller.response.CustomResponseBody;
+
+import org.apache.flink.table.client.config.Environment;
+import org.apache.flink.sqlclient.api.controller.executor.SessionContext;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -39,7 +44,7 @@ public class SqlClientGateway {
      *
      * @param sid    session id for the current session
      * @param envZip zip containing environment yaml config file and the related jars
-     * @return
+     * @return CustomResponseBody custom response body object
      */
     @PostMapping("/session/{sid}")
     @ResponseBody
@@ -54,11 +59,22 @@ public class SqlClientGateway {
                 return new CustomResponseBody("No Valid Environment File Found","900");
             }
             final Executor executor = new LocalExecutorImpl(envFileIsMap);
+            executor.start();
+
+            //sessionEnv is just an Environment object with the path for the sql-client-defaults.yaml file.
+            final Environment sessionEnv = EnvConfigManager.getEnvironment(null,envFileIsMap);
+            final SessionContext context;
+            if (sid == null) {
+                context = new SessionContext("default", sessionEnv);
+            } else {
+                context = new SessionContext(sid, sessionEnv);
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
         return new CustomResponseBody("Success","200");
     }
-
 }
+
+
 
