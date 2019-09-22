@@ -51,7 +51,6 @@ public class SqlClientGateway {
     public CustomResponseBody handleFileUpload(HttpServletResponse response, @PathVariable("sid") String sid, @RequestParam("file") MultipartFile envZip) {
         System.out.println("File for sessionid " + sid + "-->" + envZip.getOriginalFilename());
 
-        //TODO: Add validation for zip file should be accepted only
         try {
             Map<String, InputStream> envFileIsMap = UnzipUtility.GetMapofEnvFiles(envZip.getInputStream(), UnzipUtility.GetValidEnvFileLstNames());
             if (envFileIsMap.size() == 0){
