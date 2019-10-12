@@ -1,0 +1,72 @@
+Git commands : 
+
+ 
+
+1)Creating a new branch:  
+
+    git checkout -b <new-branch-name>
+    git push origin <new-branch-name>  
+
+    git branch 
+
+    git merge master 
+
+  
+
+2) Deleting remote and local branch: 
+
+        git branch -D <branch-name> 
+
+        git push --delete origin <branch-name> 
+
+         
+
+3) Storing Git username/pwd locally This will handle glide asking for git username/pwd during dependency fetch: 
+
+    git config --global credential.helper 'cache --timeout=600' 
+
+    git pull -> [To set the username password in the local store]     
+
+  
+
+4) Handling Permission denied on git command: 
+
+    cd ~/.ssh     
+
+    ssh-keygen -t rsa -C "javahub@yahoo.com" 
+
+    - Now, go and open id_rsa.pub in your favourite text editor (you can do this via Windows Explorer or the OSX Finder if you like, typing open . will open the folder). 
+
+    - Copy the contents--exactly as it appears, with no extra spaces or lines--of id_rsa.pub and paste it into GitHub and/or Bitbucket under the Account Settings > SSH Keys. NOTE: I like to give the SSH key a descriptive name, usually with the name of the workstation I'm on along with the date. 
+
+ 
+
+5) Reverting a git merged PR: 
+
+        # Always be current on your remote's origin master before doing anything! 
+
+        > git checkout master 
+
+        > git pull --rebase origin master 
+
+        # Create a new branch 
+
+        > git checkout -b revert_pull_request_1 
+
+        Switched to a new branch 'revert_pull_request_1' 
+
+        # Need to specify -m 1 because it is a merge commit 
+
+        > git revert -m 1 <PR merge commit hash> 
+
+        Finished one revert. 
+
+        [revert_pull_request_1 cf09b44] Revert "Merge pull request #1 from tildedave/pull_request_demo" 
+
+         2 files changed, 1 insertions(+), 4 deletions(-) 
+
+         delete mode 100644 this-is-also-a-test-file 
+
+        # Push your changes 
+
+        > git push origin revert_pull_request_1 
